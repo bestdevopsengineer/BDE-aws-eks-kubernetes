@@ -135,3 +135,14 @@ kubectl get sc,pvc,pv
 ```
 
 
+# List Services
+kubectl get svc
+
+# Get Public IP
+kubectl get nodes -o wide
+
+# Access Health Status API for User Management Service
+http://<EKS-WorkerNode-Public-IP>:31231/usermgmt/health-status
+
+open port on node group 31321
+http://34.229.133.214:31231/usermgmt/health-status
