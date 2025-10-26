@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: aws-cli
+  namespace: default
+spec:
+  serviceAccountName: aws-cli-sa
+  containers:
+  - name: aws-cli
+    image: amazon/aws-cli
+    command: ["sleep", "infinity"]
+
+
+#create role EKS-PodIdentity-S3-ReadOnly-Role-101
+#ROLE CREATE / AWS SERVICE / EKS / EKS - Pod Identity / S3 - ReadOnly - Role
+# GOTO CLUSTER /ACCESS/ CREATE POD IDENTITY/NAME /NAMAESPACE=DEFAULT /SA=AWS-CLI-SA
+#aws iam create-role --role-name EKS-PodIdentity-S3-ReadOnly-Role-101 --assume-role-policy-document file://./04-EKS-Storage-with-EBS-ElasticBlockStore/04-00-EKS-Pod-Identity-Agent/TrustPolicy-EKS-PodIdentity.json
+#aws iam attach-role-policy --role-name EKS-PodIdentity-S3-ReadOnly-Role-101 --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+#aws iam get-role --role-name EKS-PodIdentity-S3-ReadOnly-Role-101
+#CREATE SERVICE ACCOUNT aws-cli-sa AND ANNOTATE WITH IAM ROLE
+#kubectl create serviceaccount aws-cli-sa
+#kubectl annotate serviceaccount aws-cli-sa eks.amazonaws.com/role-arn=arn:
+#aws:iam::<ACCOUNT_ID>:role/EKS-PodIdentity-S3-ReadOnly-Role-101
+#VERIFY THE ANNOTATION
+#kubectl get serviceaccount aws-cli-sa -o yaml
+#VERIFY THE POD CAN ACCESS S3 BUCKETS
+#kubectl exec -it aws-cli -- aws s3 ls
+#DELETE THE RESOURCES
+#kubectl delete pod aws-cli
+#kubectl delete serviceaccount aws-cli-sa
+#aws iam detach-role-policy --role-name EKS-PodIdentity-S3-ReadOnly-Role-101 --policy-arn arn:aws:iam::aws:policy/AmazonS3ReadOnlyAccess
+#aws iam delete-role --role-name EKS-PodIdentity-S3-ReadOnly-Role-101
