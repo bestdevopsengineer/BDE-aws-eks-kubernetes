@@ -54,3 +54,4 @@ kubectl get all
 ```
 
 
+http://a05978eb63fac4204b229acf4ac6491d-9ec778a79b908459.elb.us-east-1.amazonaws.com/usermgmt/health-status

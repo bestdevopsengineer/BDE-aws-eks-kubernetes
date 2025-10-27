@@ -111,6 +111,10 @@ kubectl apply -f kube-manifests/
 # List Pods
 kubectl get pods
 
+1-kubectl run -it --rm --image=mysql:latest --restart=Never mysql-client -- mysql -h usermgmtdb.c7hldelt9xfp.us-east-1.rds.amazonaws.com -u dbadmin -pdbpassword11
+2-use usermgmt;
+3-show tables;
+
 # Stream pod logs to verify DB Connection is successful from SpringBoot Application
 kubectl logs -f <pod-name>
 ```
@@ -122,6 +126,8 @@ kubectl get nodes -o wide
 # Access Application
 http://<Worker-Node-Public-Ip>:31231/usermgmt/health-status
 ```
+http://34.229.133.214:31231/usermgmt/health-status
+http://35.175.239.125:31231/usermgmt/health-status
 
 ## Step-08: Clean Up 
 ```

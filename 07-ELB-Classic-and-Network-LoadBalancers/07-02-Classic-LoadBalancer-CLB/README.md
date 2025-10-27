@@ -28,6 +28,12 @@ kubectl get svc
 # Verify Pods
 kubectl get pods
 ```
+kubectl get nodes -o wide
+
+# Step — uncordon your nodes (allow scheduling again)
+kubectl uncordon ip-192-168-2-10.ec2.internal
+kubectl uncordon ip-192-168-55-4.ec2.internal
+
 
 ## Step-02: Verify the deployment
 - Verify if new CLB got created 
@@ -40,7 +46,8 @@ kubectl get pods
 ```
 # Access Application
 http://<CLB-DNS-NAME>/usermgmt/health-status
-```    
+http://a6899e63bca2c494aae1b7a9287d2d3a-186190673.us-east-1.elb.amazonaws.com/usermgmt/health-status
+
 
 ## Step-03: Clean Up 
 ```
