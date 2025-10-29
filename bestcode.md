@@ -38,15 +38,15 @@ Install the EKS Pod Identity Agent add-on
         This installs a **DaemonSet** (`eks-pod-identity-agent`) that enables Pod Identity associations.
         kubectl get daemonset -n kube-system
         kubectl get pods -n kube-system
-
-# 2: Deploy AWS CLI Pod (without Pod Identity Association)
-
+        * add on pod identity from cluster
         Create role for pod to read s3 bucket 
+        name:
         EKS-PodIdentity-S3-ReadOnly-Role-101
-        iam/role/aws service/eks/EKS - Pod Identity/s3
+
+        iam/role/aws service/eks/EKS - Pod Identity/s3/create
 
 ## Step-02-01: Create Service Account 
-        01_k8s_service_account.yaml
+        01_k8s_service_account.yaml :
         apiVersion: v1
         kind: ServiceAccount
         metadata:
@@ -54,7 +54,7 @@ Install the EKS Pod Identity Agent add-on
         namespace: default
 
 ## Create a simple Kubernetes Pod with AWS CLI image:
-        02_k8s_aws_cli_pod.yaml
+        02_k8s_aws_cli_pod.yaml :
         apiVersion: v1
         kind: Pod
         metadata:
@@ -75,7 +75,96 @@ Install the EKS Pod Identity Agent add-on
 
 ![alt text](image-2.png)
 
-3. Create an **IAM Role** with trust policy for Pod Identity → allow Pods to access **Amazon S3**  
-4. Create a **Pod Identity Association** between the Kubernetes Service Account and IAM Role  
-5. Re-test from the AWS CLI Pod, successfully list S3 buckets  
-6. Through this flow, we will clearly understand how **Pod Identity Agent** works in EKS  
+
+# Install EBS CSI DRIVER
+        goto eks/addon/ebs csi driver/eks pod identity/create role :AmazonEKSPodIdentityAmazonEBSCSIDriverRole1 
+        eks/eks pod identity/
+        AmazonEBSCSIDriverPolicy
+        AmazonEKSClusterPolicy
+
+# CREATE A STORAGE CLASS
+        storage_class.yaml:  
+            apiVersion: storage.k8s.io/v1
+            kind: StorageClass
+            metadata: 
+            name: ebs-sc
+            provisioner: ebs.csi.aws.com
+            volumeBindingMode: WaitForFirstConsumer 
+        
+        persistent_volume_claim.yaml:
+            apiVersion: v1
+            kind: PersistentVolumeClaim
+            metadata:
+            name: ebs-mysql-pv-claim
+            spec: 
+            accessModes:
+                - ReadWriteOnce
+            storageClassName: ebs-sc
+            resources: 
+                requests:
+                storage: 4Gi
+        
+        UserManagement_ConfigMap.yaml:
+            apiVersion: v1
+            kind: ConfigMap
+            metadata:
+            name: usermanagement-dbcreation-script
+            data: 
+            mysql_usermgmt.sql: |-
+                DROP DATABASE IF EXISTS usermgmt;
+                CREATE DATABASE usermgmt; 
+
+        mysql_deployment.yaml:
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+            name: mysql
+            spec: 
+            replicas: 1
+            selector:
+                matchLabels:
+                app: mysql
+            strategy:
+                type: Recreate 
+            template: 
+                metadata: 
+                labels: 
+                    app: mysql
+                spec: 
+                containers:
+                    - name: mysql
+                    image: mysql:5.6
+                    env:
+                        - name: MYSQL_ROOT_PASSWORD
+                        value: dbpassword11
+                    ports:
+                        - containerPort: 3306
+                        name: mysql    
+                    volumeMounts:
+                        - name: mysql-persistent-storage
+                        mountPath: /var/lib/mysql    
+                        - name: usermanagement-dbcreation-script
+                        mountPath: /docker-entrypoint-initdb.d                 
+                volumes: 
+                    - name: mysql-persistent-storage
+                    persistentVolumeClaim:
+                        claimName: ebs-mysql-pv-claim
+                    - name: usermanagement-dbcreation-script
+                    configMap:
+                        name: usermanagement-dbcreation-script
+                
+        mysql_clusterip_service.yaml:
+            apiVersion: v1
+            kind: Service
+            metadata: 
+            name: mysql
+            spec:
+            selector:
+                app: mysql 
+            ports: 
+                - port: 3306  
+            clusterIP: None 
+
+    k get sc
+    k get pvc
+    
