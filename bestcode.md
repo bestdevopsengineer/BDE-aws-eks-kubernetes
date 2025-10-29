@@ -30,3 +30,6 @@ eksctl create nodegroup --cluster=eksdemo1 \
                         --appmesh-access \
                         --alb-ingress-access 
 ![alt text](image.png)
+![alt text](image-1.png)
+
+Install the EKS Pod Identity Agent add-on
