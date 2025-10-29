@@ -73,6 +73,8 @@ eksdemo1/access/pod identity/EKS-PodIdentity-S3-ReadOnly-Role-101/default/aws-cl
 k apply -f .
 kubectl exec -it aws-cli -- aws s3 ls
 
+![alt text](image-2.png)
+
 3. Create an **IAM Role** with trust policy for Pod Identity → allow Pods to access **Amazon S3**  
 4. Create a **Pod Identity Association** between the Kubernetes Service Account and IAM Role  
 5. Re-test from the AWS CLI Pod, successfully list S3 buckets  
