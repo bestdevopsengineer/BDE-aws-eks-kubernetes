@@ -35,14 +35,14 @@ eksctl create nodegroup --cluster=eksdemo1 \
 Install the EKS Pod Identity Agent add-on
 # Step-00: What we’ll do
 # 1. Install the **EKS Pod Identity Agent** add-on  
-This installs a **DaemonSet** (`eks-pod-identity-agent`) that enables Pod Identity associations.
+        This installs a **DaemonSet** (`eks-pod-identity-agent`) that enables Pod Identity associations.
         kubectl get daemonset -n kube-system
         kubectl get pods -n kube-system
 
-# Step-02: Deploy AWS CLI Pod (without Pod Identity Association)
+# 2: Deploy AWS CLI Pod (without Pod Identity Association)
 
-# Create role for pod to read s3 bucket 
-# EKS-PodIdentity-S3-ReadOnly-Role-101
+        Create role for pod to read s3 bucket 
+        EKS-PodIdentity-S3-ReadOnly-Role-101
         iam/role/aws service/eks/EKS - Pod Identity/s3
 
 ## Step-02-01: Create Service Account 
@@ -68,7 +68,7 @@ This installs a **DaemonSet** (`eks-pod-identity-agent`) that enables Pod Identi
             command: ["sleep", "infinity"]
 
 ## goto cluster
-eksdemo1/access/pod identity/EKS-PodIdentity-S3-ReadOnly-Role-101/default/aws-cli-sa
+        eksdemo1/access/pod identity/EKS-PodIdentity-S3-ReadOnly-Role-101/default/aws-cli-sa
 
         k apply -f .
         kubectl exec -it aws-cli -- aws s3 ls
