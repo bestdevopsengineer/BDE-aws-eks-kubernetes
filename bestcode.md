@@ -251,6 +251,226 @@ Install the EKS Pod Identity Agent add-on
         http://<EKS-WorkerNode-Public-IP>:31231/usermgmt/health-status
         add port in security nodes group 31231 -> 0.0.0.0/0
         http://50.19.8.112:31231/usermgmt/health-status
+
+        you can test with postman by importing the file
+        AWS-EKS-Masterclass-Microservices.postman_collection.json
+        create/update/
+        kubectl run -it --rm --image=mysql:5.6 --restart=Never mysql-client -- mysql -h mysql -u root -pdbpassword11
+        mysql> show schemas;
+        mysql> use usermgmt;
+        mysql> show tables;
+        mysql> select * from users;
 # #############################################################################################################
-# this show that you need to have volume in pod to have a pv that pound to pvc
+# secrets/init containers/liveness-readiness probe/requests-limits/namespaces
 # #############################################################################################################
+![alt text](image-3.png)
+        URL: https://www.base64encode.org
+        echo -n 'dbpassword11' | base64
+
+# Create Kubernetes Secrets manifest
+    kubernetes_secrets.yaml:
+
+        apiVersion: v1
+        kind: Secret
+        metadata:
+          name: mysql-db-password
+        type: Opaque
+        data: 
+          db-password: ZGJwYXNzd29yZDEx
+
+# Update A mysql deployment with secret
+        mysql_deployment.yaml:
+
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: mysql
+        spec: 
+          replicas: 1
+          selector:
+            matchLabels:
+              app: mysql
+          strategy:
+            type: Recreate 
+          template: 
+            metadata: 
+              labels: 
+                app: mysql
+            spec: 
+              containers:
+                - name: mysql
+                  image: mysql:5.6
+                  env:
+                    - name: MYSQL_ROOT_PASSWORD
+                      valueFrom:
+                        secretKeyRef:
+                          name: mysql-db-password
+                          key: db-password 
+                  ports:
+                    - containerPort: 3306
+                      name: mysql    
+                  volumeMounts:
+                    - name: mysql-persistent-storage
+                      mountPath: /var/lib/mysql    
+                    - name: usermanagement-dbcreation-script
+                      mountPath: /docker-entrypoint-initdb.d                                            
+              volumes: 
+                - name: mysql-persistent-storage
+                  persistentVolumeClaim:
+                    claimName: ebs-mysql-pv-claim  # this create the pv and help to connect to pvc 
+                - name: usermanagement-dbcreation-script
+                  configMap:
+                    name: usermanagement-dbcreation-script
+
+# update usermanagement deploy with secret
+     usermanagement_deploy.yaml:
+
+        apiVersion: apps/v1
+        kind: Deployment 
+        metadata:
+          name: usermgmt-microservice
+          labels:
+            app: usermgmt-restapp
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              app: usermgmt-restapp
+          template:  
+            metadata:
+              labels: 
+                app: usermgmt-restapp
+            spec:
+              containers:
+                - name: usermgmt-restapp
+                  image: stacksimplify/kube-usermanagement-microservice:1.0.0
+                  ports: 
+                    - containerPort: 8095           
+                  env:
+                    - name: DB_HOSTNAME
+                      value: "mysql"            
+                    - name: DB_PORT
+                      value: "3306"            
+                    - name: DB_NAME
+                      value: "usermgmt"            
+                    - name: DB_USERNAME
+                      value: "root"            
+                    - name: DB_PASSWORD
+                      valueFrom:
+                        secretKeyRef:
+                          name: mysql-db-password
+                          key: db-password              
+
+# use init container to check if mysql pod is up or not before connection
+     usermanagement_deploy.yaml:
+
+        apiVersion: apps/v1
+        kind: Deployment 
+        metadata:
+          name: usermgmt-microservice
+          labels:
+            app: usermgmt-restapp
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              app: usermgmt-restapp
+          template:  
+            metadata:
+              labels: 
+                app: usermgmt-restapp
+            spec:
+              initContainers:
+                - name: init-db
+                  image: busybox:1.31
+                  command: ['sh', '-c', 'echo -e "Checking for the availability of MySQL Server deployment"; while ! nc -z  mysql 3306; do sleep 1; printf "-"; done; echo -e "  >> MySQL DB Server has started";']
+              containers:
+                - name: usermgmt-restapp
+                  image: stacksimplify/kube-usermanagement-microservice:1.0.0
+                  ports: 
+                    - containerPort: 8095           
+                  env:
+                    - name: DB_HOSTNAME
+                      value: "mysql"            
+                    - name: DB_PORT
+                      value: "3306"            
+                    - name: DB_NAME
+                      value: "usermgmt"            
+                    - name: DB_USERNAME
+                      value: "root"            
+                    - name: DB_PASSWORD
+                      valueFrom:
+                        secretKeyRef:
+                          name: mysql-db-password
+                          key: db-password            
+
+# liveness probe
+            **Observation:** User Management Microservice pod witll not be in READY state to accept traffic until it completes the `initialDelaySeconds=60seconds`
+
+            when to restart a container
+
+        usermanagement_deploy.yaml:
+
+        apiVersion: apps/v1
+        kind: Deployment 
+        metadata:
+          name: usermgmt-microservice
+          labels:
+            app: usermgmt-restapp
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              app: usermgmt-restapp
+          template:  
+            metadata:
+              labels: 
+                app: usermgmt-restapp
+            spec:
+              initContainers:
+                - name: init-db
+                  image: busybox:1.31
+                  command: ['sh', '-c', 'echo -e "Checking for the availability of MySQL Server deployment"; while ! nc -z  mysql 3306; do sleep 1; printf "-"; done; echo -e "  >> MySQL DB Server has started";']
+              containers:
+                - name: usermgmt-restapp
+                  image: stacksimplify/kube-usermanagement-microservice:1.0.0
+                  ports: 
+                    - containerPort: 8095           
+                  env:
+                    - name: DB_HOSTNAME
+                      value: "mysql"            
+                    - name: DB_PORT
+                      value: "3306"            
+                    - name: DB_NAME
+                      value: "usermgmt"            
+                    - name: DB_USERNAME
+                      value: "root"            
+                    - name: DB_PASSWORD
+                      valueFrom:
+                        secretKeyRef:
+                          name: mysql-db-password
+                          key: db-password     
+                  livenessProbe:
+                    exec:
+                      command: 
+                        - /bin/sh
+                        - -c 
+                        - nc -z localhost 8095
+                    initialDelaySeconds: 60
+                    periodSeconds: 10
+                  
+                  readinessProbe:
+                    httpGet:
+                      path: /usermgmt/health-status
+                      port: 8095
+                    initialDelaySeconds: 60
+                    periodSeconds: 10                   
+
+# readiness probe
+        when a container is ready to accept traffic
+# startup probe
+        when a container application has started
+# options to define probes
+        check using commands: /bin/sh -c nc -z localhost 8095
+        check using HTTP GET Request: httpget path:/health-status
+        check using TCP: tcpSocket Port: 8095
