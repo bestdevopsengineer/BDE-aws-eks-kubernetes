@@ -474,3 +474,212 @@ Install the EKS Pod Identity Agent add-on
         check using commands: /bin/sh -c nc -z localhost 8095
         check using HTTP GET Request: httpget path:/health-status
         check using TCP: tcpSocket Port: 8095
+
+# REQUESTS & LIMITS
+      usermanagement_deploy.yaml:
+
+        apiVersion: apps/v1
+        kind: Deployment 
+        metadata:
+          name: usermgmt-microservice
+          labels:
+            app: usermgmt-restapp
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              app: usermgmt-restapp
+          template:  
+            metadata:
+              labels: 
+                app: usermgmt-restapp
+            spec:
+              initContainers:
+                - name: init-db
+                  image: busybox:1.31
+                  command: ['sh', '-c', 'echo -e "Checking for the availability of MySQL Server deployment"; while ! nc -z  mysql 3306; do sleep 1; printf "-"; done; echo -e "  >> MySQL DB Server has started";']
+              containers:
+                - name: usermgmt-restapp
+                  image: stacksimplify/kube-usermanagement-microservice:1.0.0
+                  ports: 
+                    - containerPort: 8095           
+                  env:
+                    - name: DB_HOSTNAME
+                      value: "mysql"            
+                    - name: DB_PORT
+                      value: "3306"            
+                    - name: DB_NAME
+                      value: "usermgmt"            
+                    - name: DB_USERNAME
+                      value: "root"            
+                    - name: DB_PASSWORD
+                      valueFrom:
+                        secretKeyRef:
+                          name: mysql-db-password
+                          key: db-password     
+                  livenessProbe:
+                    exec:
+                      command: 
+                        - /bin/sh
+                        - -c 
+                        - nc -z localhost 8095
+                    initialDelaySeconds: 60
+                    periodSeconds: 10
+                  
+                  readinessProbe:
+                    httpGet:
+                      path: /usermgmt/health-status
+                      port: 8095
+                    initialDelaySeconds: 60
+                    periodSeconds: 10            
+                  resources:
+                    requests:
+                      cpu: "600m" 
+                        memory: "256Mi"
+                    limits:
+                      cpu: "1000m"
+                        memory: "1024Mi"
+# NAMESPACES
+![alt text](image-4.png)
+
+# create usermanagement service
+        usermanagement-service.yaml:
+
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: usermgmt-restapp-service
+          labels: 
+            app: usermgmt-restapp
+        spec:
+          type: NodePort
+        selector:
+          app: usermgmt-restapp
+        ports: 
+          - port: 8095
+            targetPort: 8095
+          
+    
+        Whenever we create with same manifests multiple environments like dev1, dev2 
+        with namespaces, we cannot have same worker node port for multiple services.
+        We will have port conflict.
+        Its good for k8s system to provide dynamic nodeport for us in such situations.
+        #nodePort: 31231
+
+# LIMITS-RANGE
+![alt text](image-5.png)
+
+    namespace_limitrange.yaml:
+
+        apiVersion: v1
+        kind: Namespace
+        metadata: 
+          name: dev3
+        ---  
+        apiVersion: v1
+        kind: LimitRange
+        metadata:
+          name: default-cpu-mem-limit-range
+          namespace: dev3
+        spec:
+          limits:
+            - default:
+                cpu: "500m"  # If not specified default limit is 1 vCPU per container     
+                memory: "512Mi" # If not specified the Container's memory limit is set to 512Mi, which is the default memory limit for the namespace.
+              defaultRequest:
+                cpu: "300m" # If not specified default it will take from whatever specified in limits.default.cpu      
+                memory: "256Mi" # If not specified default it will take from whatever specified in limits.default.memory
+              type: Container 
+
+
+        kubectl get limits -n dev3
+
+# RESOURCES QUOTAS
+    resource-quota.yaml:
+
+        apiVersion: v1
+        kind: Namespace
+        metadata: 
+          name: dev3
+        ---  
+        apiVersion: v1
+        kind: LimitRange
+        metadata:
+          name: default-cpu-mem-limit-range
+          namespace: dev3
+        spec:
+          limits:
+            - default:
+                cpu: "500m"  # If not specified default limit is 1 vCPU per container     
+                memory: "512Mi" # If not specified the Container's memory limit is set to 512Mi, which is the default memory limit for the namespace.
+              defaultRequest:
+                cpu: "300m" # If not specified default it will take from whatever specified in limits.default.cpu      
+                memory: "256Mi" # If not specified default it will take from whatever specified in limits.default.memory
+              type: Container 
+        ---
+        apiVersion: v1
+        kind: ResourceQuota
+        metadata:
+          name: ns-resource-quota
+          namespace: dev3
+        spec:
+          hard:
+            requests.cpu: "1"
+            requests.memory: 1Gi
+            limits.cpu: "2"
+            limits.memory: 2Gi  
+            pods: "5"    
+            configmaps: "5" 
+            persistentvolumeclaims: "5" 
+            secrets: "5" 
+            services: "5" 
+
+# EKS STORAGES WITH RDS DATABASE
+![alt text](image-6.png)
+
+        Create DB Security Group: 
+        eks-rds-db-sg
+        Allow access for RDS Database on Port 3306
+        choose the vpc
+        mysql/aurora 3306 anywhere
+
+        Create DB Subnets Group: 
+        rds/subnet groups
+        eks-rds-db-subnetsg
+        EKS RDS DB Subnet Group
+        choose vpc
+        choose private subnets
+
+# CREATE A DATABASE
+        mysql
+        free tier
+        usermgmtdb
+        dbadmin
+        dbpassword11
+        dbpassword11
+        t2.micro
+        vpc
+        No
+        eks_rds_db_sg
+        us-east-1
+        # we dont put the name because we will create the user manually
+        copy the endpoint: usermgmtdb.coxa6y4q2j55.us-east-1.rds.amazonaws.com
+
+# CREATE KUBENRTES EXTERNALNAME SERVICE
+        mysql-externalname-service.yaml:
+
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: mysql
+        spec:
+          type: ExternalName
+          externalName: usermgmtdb.coxa6y4q2j55.us-east-1.rds.amazonaws.com
+
+          k apply -f mysql-externalname-service.yaml
+
+          kubectl run -it --rm --image=mysql:latest --restart=Never mysql-client -- mysql -h usermgmtdb.coxa6y4q2j55.us-east-1.rds.amazonaws.com -u dbadmin -pdbpassword11
+          mysql> show schemas;
+          mysql> create database usermgmt;
+          mysql> show schemas;
+          mysql> exit
