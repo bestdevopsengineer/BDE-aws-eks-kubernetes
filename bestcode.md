@@ -728,3 +728,125 @@ Install the EKS Pod Identity Agent add-on
                           targetPort: 8095
 
                     http://a54b90cb8f0704a85aa2ca0e8f205338-132626137.us-east-1.elb.amazonaws.com/usermgmt/health-status
+
+# NETWORK LOADBALANCER 
+![alt text](image-8.png)
+
+        networkloadbalancer.yaml:
+
+                    apiVersion: v1
+                    kind: Service
+                    metadata:
+                      name: nlb-usermgmt-restapp
+                      labels: 
+                        app: usermgmt-restapp
+                      annotations:
+                        service.beta.kubernetes.io/aws-load-balancer-type: nlb 
+                    spec:
+                      type: LoadBalancer # Default - CLB
+                      selector:
+                        app: usermgmt-restapp
+                      ports: 
+                        - port: 80
+                          targetPort: 8095
+
+                    http://ad50e35cbfb8343e4998d5124e251bdf-660a3bbf8cb349c8.elb.us-east-1.amazonaws.com/usermgmt/health-status
+
+
+![alt text](image-9.png)
+![alt text](image-10.png)
+![alt text](image-11.png)
+
+# APPLICATION LOADBALANCER INGRESS CONTROLLER
+                Support Path-base routing [/app1, /app2, /usermgmt]
+                Support Host-based routing [apps.kubeoncloud.com, users.kubeoncloud.com]
+                Support for redirecting requests from one URL to another
+                Support for returning a custom HTTP response
+                Support for registering Lambda functions as targets
+                Support load balancer to authenticate users of your application
+                Support for containerized app (aws ecs)
+                Support for monitoring the health of each servcies independently as health check defined are target level
+                Support two traffics: Instance , IP
+
+                we created:
+                iam policy
+                iam role  ---annotate-in--> service account
+
+                when you created loadbalancer controller it will create:
+                awsloadbalancer controller deploment
+                aws loadbalancer controller webhook clusterIP service
+                aws load balancer tls
+
+                service account ----will-be-associated---> awsloadbalancer controller deploment
+
+                aadmin -> deploy ingress manifests
+                        alb controller will watch for ingress event on api server
+                        when it will see ingress manifests deployed
+                        alb controller will take the manifests goes and:
+                        create
+                        update
+                        delete 
+                            - aws application loadbalancers [alb in aws]
+                            - ingress resources in cluster
+
+![alt text](image-12.png)
+
+        - CREATE IAM POLICY AND MAKE A NOTE OF POLICY ARN
+            
+                curl -o iam_policy_latest.json https://raw.githubusercontent.com/kubernetes-sigs/aws-load-balancer-controller/main/docs/install/iam_policy.json
+
+                # Create IAM Policy using policy downloaded 
+                    aws iam create-policy \
+                        --policy-name AWSLoadBalancerControllerIAMPolicy \
+                        --policy-document file://iam_policy_latest.json
+
+                    "Arn": "arn:aws:iam::502845302465:policy/AWSLoadBalancerControllerIAMPolicy"
+
+
+        - CREATE IAM ROLE AND K8S SERVICE ACCOUNT AND BOUND THEM
+
+            #check if they exist 
+            kubectl get sa -n kube-system 
+            kubectl get sa aws-load-balancer-controller -n kube-system
+            if not create it
+
+            kubectl get sa -n kube-system 
+
+            eksctl create iamserviceaccount \
+            --cluster=eksdemo1 \
+            --region=us-east-1 \
+            --namespace=kube-system \
+            --name=aws-load-balancer-controller \
+            --attach-policy-arn=arn:aws:iam::502845302465:policy/AWSLoadBalancerControllerIAMPolicy \
+            --override-existing-serviceaccounts \
+            --approve
+
+            eksctl  get iamserviceaccount --cluster eksdemo1 --region us-east-1
+            kubectl get sa aws-load-balancer-controller -n kube-system
+
+        - INSTALL AWS LOADBALANCER CONTROLLER USING HELM3 CLI
+            [Get Region Code and Account info](https://docs.aws.amazon.com/eks/latest/userguide/add-ons-images.html)
+            us-east-1 is 602401143452
+                helm repo add eks https://aws.github.io/eks-charts
+                helm repo update
+
+                helm install aws-load-balancer-controller eks/aws-load-balancer-controller \
+                -n kube-system \
+                --set clusterName=eksdemo1 \
+                --set serviceAccount.create=false \
+                --set serviceAccount.name=aws-load-balancer-controller \
+                --set region=us-east-1 \
+                --set vpcId=vpc-0538b04ea524fad97 \
+                --set image.repository=602401143452.dkr.ecr.us-east-1.amazonaws.com/amazon/aws-load-balancer-controller
+
+                kubectl -n kube-system describe deployment aws-load-balancer-controller
+                kubectl get deployment -n kube-system aws-load-balancer-controller
+
+                # Verify AWS Load Balancer Controller Webhook service created
+                kubectl -n kube-system describe svc aws-load-balancer-webhook-service
+
+                kubectl -n kube-system get svc aws-load-balancer-webhook-service
+
+                kubectl -n kube-system get pods
+                
+            -
