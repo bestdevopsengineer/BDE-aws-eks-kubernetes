@@ -31,7 +31,9 @@ This will help us to login to the EKS Worker Nodes using Terminal.
                         --alb-ingress-access 
 ![alt text](image.png)
 ![alt text](image-1.png)
-
+# #############################################################################################################
+# this show that to list s3 bucket from eks/pod you need a service account
+# #############################################################################################################
 Install the EKS Pod Identity Agent add-on
 # Step-00: What we’ll do
 # 1. Install the **EKS Pod Identity Agent** add-on  
@@ -74,6 +76,9 @@ Install the EKS Pod Identity Agent add-on
 
         k apply -f .
         kubectl exec -it aws-cli -- aws s3 ls
+# #############################################################################################################
+# this show that you need to have volume in pod to have a pv that pound to pvc
+# #############################################################################################################
 
 ![alt text](image-2.png)
 
@@ -121,7 +126,7 @@ Install the EKS Pod Identity Agent add-on
               DROP DATABASE IF EXISTS usermgmt;
               CREATE DATABASE usermgmt; 
 
-# CREATE A deployment
+# CREATE A mysql deployment
         mysql_deployment.yaml:
 
         apiVersion: apps/v1
@@ -162,7 +167,7 @@ Install the EKS Pod Identity Agent add-on
                   configMap:
                     name: usermanagement-dbcreation-script
 
-# CREATE A service               
+# CREATE A mysql service               
         mysql_clusterip_service.yaml:
 
             apiVersion: v1
@@ -188,3 +193,64 @@ Install the EKS Pod Identity Agent add-on
 
         # Verify usermgmt schema got created which we provided in ConfigMap
         mysql> show schemas;
+
+# create usermanagement deploy
+     usermanagement_deploy.yaml:
+
+        apiVersion: apps/v1
+        kind: Deployment 
+        metadata:
+          name: usermgmt-microservice
+          labels:
+            app: usermgmt-restapp
+        spec:
+          replicas: 1
+          selector:
+            matchLabels:
+              app: usermgmt-restapp
+          template:  
+            metadata:
+              labels: 
+                app: usermgmt-restapp
+            spec:
+              containers:
+                - name: usermgmt-restapp
+                  image: stacksimplify/kube-usermanagement-microservice:1.0.0
+                  ports: 
+                    - containerPort: 8095           
+                  env:
+                    - name: DB_HOSTNAME
+                    value: "mysql"            
+                    - name: DB_PORT
+                    value: "3306"            
+                    - name: DB_NAME
+                    value: "usermgmt"            
+                    - name: DB_USERNAME
+                    value: "root"            
+                    - name: DB_PASSWORD
+                    value: "dbpassword11"     
+
+# create usermanagement service
+        usermanagement-service.yaml:
+
+        apiVersion: v1
+        kind: Service
+        metadata:
+          name: usermgmt-restapp-service
+          labels: 
+            app: usermgmt-restapp
+        spec:
+          type: NodePort
+        selector:
+          app: usermgmt-restapp
+        ports: 
+          - port: 8095
+            targetPort: 8095
+            nodePort: 31231
+
+        http://<EKS-WorkerNode-Public-IP>:31231/usermgmt/health-status
+        add port in security nodes group 31231 -> 0.0.0.0/0
+        http://50.19.8.112:31231/usermgmt/health-status
+# #############################################################################################################
+# this show that you need to have volume in pod to have a pv that pound to pvc
+# #############################################################################################################
