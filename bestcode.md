@@ -47,23 +47,25 @@ Install the EKS Pod Identity Agent add-on
 
 ## Step-02-01: Create Service Account 
         01_k8s_service_account.yaml :
+
         apiVersion: v1
         kind: ServiceAccount
         metadata:
-        name: aws-cli-sa
-        namespace: default
+          name: aws-cli-sa
+          namespace: default
 
 ## Create a simple Kubernetes Pod with AWS CLI image:
         02_k8s_aws_cli_pod.yaml :
+
         apiVersion: v1
         kind: Pod
         metadata:
-        name: aws-cli
-        namespace: default
+          name: aws-cli
+          namespace: default
         spec:
-        serviceAccountName: aws-cli-sa
-        containers:
-        - name: aws-cli
+          serviceAccountName: aws-cli-sa
+          containers:
+          - name: aws-cli
             image: amazon/aws-cli
             command: ["sleep", "infinity"]
 
@@ -84,87 +86,105 @@ Install the EKS Pod Identity Agent add-on
 
 # CREATE A STORAGE CLASS
         storage_class.yaml:  
+
             apiVersion: storage.k8s.io/v1
             kind: StorageClass
             metadata: 
-            name: ebs-sc
+              name: ebs-sc
             provisioner: ebs.csi.aws.com
             volumeBindingMode: WaitForFirstConsumer 
-        
+
+# CREATE A PVC
         persistent_volume_claim.yaml:
+
             apiVersion: v1
             kind: PersistentVolumeClaim
             metadata:
-            name: ebs-mysql-pv-claim
+              name: ebs-mysql-pv-claim
             spec: 
-            accessModes:
+              accessModes:
                 - ReadWriteOnce
             storageClassName: ebs-sc
             resources: 
-                requests:
+              requests:
                 storage: 4Gi
-        
+
+# CREATE A CONFIGMAP        
         UserManagement_ConfigMap.yaml:
+
             apiVersion: v1
             kind: ConfigMap
             metadata:
-            name: usermanagement-dbcreation-script
+              name: usermanagement-dbcreation-script
             data: 
             mysql_usermgmt.sql: |-
-                DROP DATABASE IF EXISTS usermgmt;
-                CREATE DATABASE usermgmt; 
+              DROP DATABASE IF EXISTS usermgmt;
+              CREATE DATABASE usermgmt; 
 
+# CREATE A deployment
         mysql_deployment.yaml:
-            apiVersion: apps/v1
-            kind: Deployment
-            metadata:
-            name: mysql
-            spec: 
-            replicas: 1
-            selector:
-                matchLabels:
+
+        apiVersion: apps/v1
+        kind: Deployment
+        metadata:
+          name: mysql
+        spec: 
+          replicas: 1
+          selector:
+            matchLabels:
+              app: mysql
+          strategy:
+            type: Recreate 
+          template: 
+            metadata: 
+              labels: 
                 app: mysql
-            strategy:
-                type: Recreate 
-            template: 
-                metadata: 
-                labels: 
-                    app: mysql
-                spec: 
-                containers:
-                    - name: mysql
-                    image: mysql:5.6
-                    env:
-                        - name: MYSQL_ROOT_PASSWORD
-                        value: dbpassword11
-                    ports:
-                        - containerPort: 3306
-                        name: mysql    
-                    volumeMounts:
-                        - name: mysql-persistent-storage
-                        mountPath: /var/lib/mysql    
-                        - name: usermanagement-dbcreation-script
-                        mountPath: /docker-entrypoint-initdb.d                 
-                volumes: 
+            spec: 
+              containers:
+                - name: mysql
+                  image: mysql:5.6
+                  env:
+                    - name: MYSQL_ROOT_PASSWORD
+                      value: dbpassword11
+                  ports:
+                    - containerPort: 3306
+                      name: mysql    
+                  volumeMounts:
                     - name: mysql-persistent-storage
-                    persistentVolumeClaim:
-                        claimName: ebs-mysql-pv-claim
+                      mountPath: /var/lib/mysql    
                     - name: usermanagement-dbcreation-script
-                    configMap:
-                        name: usermanagement-dbcreation-script
-                
+                      mountPath: /docker-entrypoint-initdb.d                                            
+              volumes: 
+                - name: mysql-persistent-storage
+                  persistentVolumeClaim:
+                    claimName: ebs-mysql-pv-claim  # this create the pv and help to connect to pvc 
+                - name: usermanagement-dbcreation-script
+                  configMap:
+                    name: usermanagement-dbcreation-script
+
+# CREATE A service               
         mysql_clusterip_service.yaml:
+
             apiVersion: v1
             kind: Service
             metadata: 
-            name: mysql
+              name: mysql
             spec:
-            selector:
+              selector:
                 app: mysql 
-            ports: 
+              ports: 
                 - port: 3306  
-            clusterIP: None 
+              clusterIP: None 
 
-    k get sc
-    k get pvc
-    
+# Connect to MySQL Database
+
+        # Connect to MYSQL Database
+        kubectl run -it --rm --image=mysql:5.6 --restart=Never mysql-client -- mysql -h mysql -pdbpassword11
+
+        [or]
+
+        # Use mysql client latest tag
+        kubectl run -it --rm --image=mysql:latest --restart=Never mysql-client -- mysql -h mysql -pdbpassword11
+
+        # Verify usermgmt schema got created which we provided in ConfigMap
+        mysql> show schemas;
