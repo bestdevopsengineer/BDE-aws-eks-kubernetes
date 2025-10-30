@@ -683,3 +683,48 @@ Install the EKS Pod Identity Agent add-on
           mysql> create database usermgmt;
           mysql> show schemas;
           mysql> exit
+
+# CLASSIC LOADBALANCER 
+![alt text](image-7.png)
+        aws eks update-kubeconfig --region us-east-1 --name eksdemo1
+        eksctl get nodegroup --cluster=eksdemo1 --region us-east-1
+        eksctl delete nodegroup eksdemo1-ng-public1 --cluster eksdemo1 --region us-east-1
+
+        CREATE EKS NODE GROUP IN PRIVATE SUBNETS
+        
+            eksctl create nodegroup --cluster=eksdemo1 \
+                        --region=us-east-1 \
+                        --name=eksdemo1-ng-private1 \
+                        --node-type=t3.medium \
+                        --nodes-min=2 \
+                        --nodes-max=4 \
+                        --node-volume-size=20 \
+                        --ssh-access \
+                        --ssh-public-key=kube-demo \
+                        --managed \
+                        --asg-access \
+                        --external-dns-access \
+                        --full-ecr-access \
+                        --appmesh-access \
+                        --alb-ingress-access \
+                        --node-private-networking      
+            
+            # create usermanagement service
+            
+            classicloadbalancer.yaml:
+
+                    apiVersion: v1
+                    kind: Service
+                    metadata:
+                    name: clb-usermgmt-restapp
+                    labels: 
+                        app: usermgmt-restapp
+                    spec:
+                      type: LoadBalancer # Default - CLB
+                      selector:
+                        app: usermgmt-restapp
+                      ports: 
+                        - port: 80
+                          targetPort: 8095
+
+                    http://a54b90cb8f0704a85aa2ca0e8f205338-132626137.us-east-1.elb.amazonaws.com/usermgmt/health-status
