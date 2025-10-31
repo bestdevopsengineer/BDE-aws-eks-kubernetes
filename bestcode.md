@@ -853,6 +853,7 @@ Install the EKS Pod Identity Agent add-on
 ![alt text](image-13.png)
 ![alt text](image-14.png)
 
+
             apiVersion: networking.k8s.io/v1
             kind: IngressClass
             metadata:
