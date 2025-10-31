@@ -848,5 +848,80 @@ Install the EKS Pod Identity Agent add-on
                 kubectl -n kube-system get svc aws-load-balancer-webhook-service
 
                 kubectl -n kube-system get pods
-                
-            -
+
+
+![alt text](image-13.png)
+![alt text](image-14.png)
+
+            apiVersion: networking.k8s.io/v1
+            kind: IngressClass
+            metadata:
+              name: my-aws-ingress-class
+            annotations:
+                ingressclass.kubernetes.io/is-default-class: "true"
+            spec:
+            controller: ingress.k8s.aws/alb
+
+            ---
+            apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: app1-nginx-deployment
+              labels:
+                app: app1-nginx
+            spec:
+              replicas: 1
+              selector:
+                matchLabels:
+                  app: app1-nginx
+              template:
+                metadata:
+                  labels:
+                    app: app1-nginx
+                spec:
+                  containers:
+                    - name: app1-nginx
+                      image: stacksimplify/kube-nginxapp1:1.0.0
+                      ports:
+                        - containerPort: 80
+            ---
+            apiVersion: v1
+            kind: Service
+            metadata:
+              name: app1-nginx-nodeport-service
+              labels:
+                app: app1-nginx
+              annotations:
+            spec:
+              type: NodePort
+              selector:
+                app: app1-nginx
+              ports:
+                - port: 80
+                  targetPort: 80
+
+            ---
+            apiVersion: networking.k8s.io/v1
+            kind: Ingress
+            metadata:
+              name: ingress-nginxapp1
+              labels:
+                app: app1-nginx
+              annotations:
+                alb.ingress.kubernetes.io/load-balancer-name: app1ingress
+                alb.ingress.kubernetes.io/scheme: internet-facing
+                alb.ingress.kubernetes.io/healthcheck-protocol: HTTP 
+                alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+                alb.ingress.kubernetes.io/healthcheck-path: /app1/index.html    
+                alb.ingress.kubernetes.io/healthcheck-interval-seconds: '15'
+                alb.ingress.kubernetes.io/healthcheck-timeout-seconds: '5'
+                alb.ingress.kubernetes.io/success-codes: '200'
+                alb.ingress.kubernetes.io/healthy-threshold-count: '2'
+                alb.ingress.kubernetes.io/unhealthy-threshold-count: '2'
+            spec:
+              ingressClassName: my-aws-ingress-class # Ingress Class
+              defaultBackend:
+                service:
+                  name: app1-nginx-nodeport-service
+                  port:
+                    number: 80              
