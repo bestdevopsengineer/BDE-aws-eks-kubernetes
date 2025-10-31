@@ -1114,3 +1114,12 @@ check 08-03 folder
                              --region us-east-1 \
                              --namespace fp-dev
         check 09-01
+
+# ELD NETWORK LOADBALANCER WITH LBC
+
+![alt text](image-25.png)
+![alt text](image-26.png)
+![alt text](image-27.png)
+
+# 1-LOADBALANCER CONTROLLER- NETWORKLOADBALANCER- BASIC
+    
