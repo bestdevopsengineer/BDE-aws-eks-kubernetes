@@ -51,7 +51,7 @@ kubectl logs -f $(kubectl get po | egrep -o 'external-dns[A-Za-z0-9-]+')
 ### Verify Route53
 - Go to Services -> Route53
 - You should see **Record Sets** added for 
-  - target-type-ip-501.stacksimplify.com 
+  - target-type-ip-501.duboisjou.com 
 
 
 ## Step-04: Access Application using newly registered DNS Name
@@ -59,18 +59,18 @@ kubectl logs -f $(kubectl get po | egrep -o 'external-dns[A-Za-z0-9-]+')
 - Test if our new DNS entries registered and resolving to an IP Address
 ```t
 # nslookup commands
-nslookup target-type-ip-501.stacksimplify.com 
+nslookup target-type-ip-501.duboisjou.com 
 ```
 ### Access Application using DNS domain
 ```t
 # Access App1
-http://target-type-ip-501.stacksimplify.com /app1/index.html
+http://target-type-ip-501.duboisjou.com/app1/index.html
 
 # Access App2
-http://target-type-ip-501.stacksimplify.com /app2/index.html
+http://target-type-ip-501.duboisjou.com/app2/index.html
 
 # Access Default App (App3)
-http://target-type-ip-501.stacksimplify.com 
+http://target-type-ip-501.duboisjou.com 
 ```
 
 ## Step-05: Clean Up
@@ -81,5 +81,5 @@ kubectl delete -f kube-manifests/
 ## Verify Route53 Record Set to ensure our DNS records got deleted
 - Go to Route53 -> Hosted Zones -> Records 
 - The below records should be deleted automatically
-  - target-type-ip-501.stacksimplify.com 
+  - target-type-ip-501.duboisjou.com 
 ```

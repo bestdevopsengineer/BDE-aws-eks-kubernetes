@@ -852,7 +852,7 @@ Install the EKS Pod Identity Agent add-on
 
 ![alt text](image-13.png)
 ![alt text](image-14.png)
-
+![alt text](image-15.png)
 
             apiVersion: networking.k8s.io/v1
             kind: IngressClass
@@ -863,7 +863,11 @@ Install the EKS Pod Identity Agent add-on
             spec:
             controller: ingress.k8s.aws/alb
 
-            ---
+![alt text](image-16.png)
+![alt text](image-17.png)
+
+# ALB INGRESS BASICS DEFAULT BACKEND
+
             apiVersion: apps/v1
             kind: Deployment
             metadata:
@@ -920,9 +924,193 @@ Install the EKS Pod Identity Agent add-on
                 alb.ingress.kubernetes.io/healthy-threshold-count: '2'
                 alb.ingress.kubernetes.io/unhealthy-threshold-count: '2'
             spec:
-              ingressClassName: my-aws-ingress-class # Ingress Class
+              ingressClassName: my-aws-ingress-class 
               defaultBackend:
                 service:
                   name: app1-nginx-nodeport-service
                   port:
                     number: 80              
+
+            http://app1ingress-403255566.us-east-1.elb.amazonaws.com/
+            this will give you nginx website
+            http://app1ingress-403255566.us-east-1.elb.amazonaws.com/app1/index.html
+
+# ALB INGRESS BASICS MANIFESTS RULES
+apiVersion: apps/v1
+            kind: Deployment
+            metadata:
+              name: app1-nginx-deployment
+              labels:
+                app: app1-nginx
+            spec:
+              replicas: 1
+              selector:
+                matchLabels:
+                  app: app1-nginx
+              template:
+                metadata:
+                  labels:
+                    app: app1-nginx
+                spec:
+                  containers:
+                    - name: app1-nginx
+                      image: stacksimplify/kube-nginxapp1:1.0.0
+                      ports:
+                        - containerPort: 80
+            ---
+            apiVersion: v1
+            kind: Service
+            metadata:
+              name: app1-nginx-nodeport-service
+              labels:
+                app: app1-nginx
+              annotations:
+            spec:
+              type: NodePort
+              selector:
+                app: app1-nginx
+              ports:
+                - port: 80
+                  targetPort: 80
+
+            ---
+            apiVersion: networking.k8s.io/v1
+            kind: Ingress
+            metadata:
+              name: ingress-nginxapp1
+              labels:
+                app: app1-nginx
+              annotations:
+                alb.ingress.kubernetes.io/load-balancer-name: app1ingress
+                alb.ingress.kubernetes.io/scheme: internet-facing
+                alb.ingress.kubernetes.io/healthcheck-protocol: HTTP 
+                alb.ingress.kubernetes.io/healthcheck-port: traffic-port
+                alb.ingress.kubernetes.io/healthcheck-path: /app1/index.html    
+                alb.ingress.kubernetes.io/healthcheck-interval-seconds: '15'
+                alb.ingress.kubernetes.io/healthcheck-timeout-seconds: '5'
+                alb.ingress.kubernetes.io/success-codes: '200'
+                alb.ingress.kubernetes.io/healthy-threshold-count: '2'
+                alb.ingress.kubernetes.io/unhealthy-threshold-count: '2'
+            spec:
+              ingressClassName: my-aws-ingress-class 
+              rules:
+              - http:
+                  paths:
+                  - path: /
+                    pathType: Prefix
+                    backend:
+                      service:
+                        name: app1-nginx-nodeport-service
+                        port:
+                          number: 80            
+# ALB INGRESS CONTEXTPATH BASED ROUTING
+![alt text](image-18.png)
+![alt text](image-20.png)
+
+check 08-03 folder
+
+# ALB INGRESS SSL
+![alt text](image-19.png)
+        1-REGISTER A DOMAIN IN ROUTE53
+        dubois.com
+
+        2-CREATE SSL CERTIFICATE IN CERTIFICATE MANAGER
+        *.duboisjou.com
+        dns validation method
+        create records in route 53
+
+        3-ADD ANNOTATIONS RELATED TO SSL
+        copy arn from certificate manager and add in yaml
+
+        4-ADD DNS IN ROUTE53
+        record name = www or ssldemo101
+        record type= A
+        alias to Application and classic loadbalancer
+
+        Test: nslookup ssldemo101.duboisjou.com
+        http://ssldemo101.duboisjou.com
+        https://ssldemo101.duboisjou.com
+        both works.
+
+# ALB INGRESS SSL REDIRECT
+        just add
+        alb.ingress.kubernetes.io/ssl-redirect: '443'   
+
+
+# DEPLOY EXTERNAL DNS ON EKS
+![alt text](image-21.png)
+![alt text](image-22.png)
+        
+        CREATE IAM POLICY: AllowExternalDNSUpdate
+        description: Allow access to Route53 resources for externalDNS
+
+        {
+            "Version": "2012-10-17",
+            "Statement": [
+                {
+                "Effect": "Allow",
+                "Action": [
+                    "route53:ChangeResourceRecordSets"
+                ],
+                "Resource": [
+                    "arn:aws:route53:::hostedzone/*"
+                ]
+                },
+                {
+                "Effect": "Allow",
+                "Action": [
+                    "route53:ListHostedZones",
+                    "route53:ListResourceRecordSets"
+                ],
+                "Resource": [
+                    "*"
+                ]
+                }
+            ]
+        }
+
+        CREATE IAM ROLE, K8S SERVICE ACCOUNT & ASSOCIATE IAM POLICY
+
+        eksctl create iamserviceaccount \
+        --name external-dns \
+        --namespace default \
+        --cluster eksdemo1 \
+        --attach-policy-arn arn:aws:iam::502845302465:policy/AllowExternalDNSUpdate \
+        --approve \
+        --region us-east-1 \
+        --override-existing-serviceaccounts
+
+        kubectl get sa
+        kubectl describe sa external-dns
+        eksctl get iamserviceaccount --cluster eksdemo1
+        copy arn:aws:iam::502845302465:role/eksctl-eksdemo1-addon-iamserviceaccount-defau-Role1-zJtf17xjThJW
+        add into the externalDNS yaml
+
+        http://dnstest901.duboisjou.com/app1/index.html
+        http://dnstest901.duboisjou.com/app2/index.html
+        http://dnstest901.duboisjou.com/
+
+# USE EXTERNALDNS FOR K8S SERVICE
+        kubectl logs -f $(kubectl get po | egrep -o 'external-dns[A-Za-z0-9-]+')
+        http://externaldns-k8s-service-demo101.duboisjou.com/app1/index.html
+
+# NAMEBASED VIRTUAL HOST ROUTING
+![alt text](image-23.png)
+![alt text](image-24.png)
+        # Access App1
+        http://app101.duboisjou.com/app1/index.html
+
+        # Access App2
+        http://app201.duboisjou.com/app2/index.html
+
+        # Access Default App (App3)
+        http://default101.duboisjou.com
+        
+# INGRESS SSL DISCOVERY HOST
+
+# CREATE FARGATE PROFILE
+        eksctl create fargateprofile --cluster eksdemo1 \
+                             --name fp-demo \
+                             --region us-east-1 \
+                             --namespace fp-dev
+        check 09-01

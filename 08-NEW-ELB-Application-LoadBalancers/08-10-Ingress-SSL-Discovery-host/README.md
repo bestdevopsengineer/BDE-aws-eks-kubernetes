@@ -7,7 +7,7 @@ description: Learn AWS Load Balancer Controller - Ingress SSL Discovery Host
 - Automatically disover SSL Certificate from AWS Certificate Manager Service using `spec.rules.host`
 - In this approach, with the specified domain name if we have the SSL Certificate created in AWS Certificate Manager, that certificate will be automatically detected and associated to Application Load Balancer.
 - We don't need to get the SSL Certificate ARN and update it in Kubernetes Ingress Manifest
-- Discovers via Ingress rule host and attaches a cert for `app102.stacksimplify.com` or `*.stacksimplify.com` to the ALB
+- Discovers via Ingress rule host and attaches a cert for `app102.duboisjou.com` or `*.duboisjou.com` to the ALB
 
 ## Step-02: Discover via Ingress "spec.rules.host"
 ```yaml
@@ -38,7 +38,7 @@ metadata:
     # SSL Redirect Setting
     alb.ingress.kubernetes.io/ssl-redirect: '443'
     # External DNS - For creating a Record Set in Route53
-    external-dns.alpha.kubernetes.io/hostname: default102.stacksimplify.com 
+    external-dns.alpha.kubernetes.io/hostname: default102.duboisjou.com 
 spec:
   ingressClassName: my-aws-ingress-class   # Ingress Class                  
   defaultBackend:
@@ -47,7 +47,7 @@ spec:
       port:
         number: 80     
   rules:
-    - host: app102.stacksimplify.com
+    - host: app102.duboisjou.com
       http:
         paths:
           - path: /
@@ -57,7 +57,7 @@ spec:
                 name: app1-nginx-nodeport-service
                 port: 
                   number: 80
-    - host: app202.stacksimplify.com
+    - host: app202.duboisjou.com
       http:
         paths:                  
           - path: /
@@ -105,29 +105,29 @@ kubectl logs -f $(kubectl get po | egrep -o 'external-dns[A-Za-z0-9-]+')
 ### Verify Route53
 - Go to Services -> Route53
 - You should see **Record Sets** added for 
-  - default102.stacksimplify.com
-  - app102.stacksimplify.com
-  - app202.stacksimplify.com
+  - default102.duboisjou.com
+  - app102.duboisjou.com
+  - app202.duboisjou.com
 
 ## Step-04: Access Application using newly registered DNS Name
 ### Perform nslookup tests before accessing Application
 - Test if our new DNS entries registered and resolving to an IP Address
 ```t
 # nslookup commands
-nslookup default102.stacksimplify.com
-nslookup app102.stacksimplify.com
-nslookup app202.stacksimplify.com
+nslookup default102.duboisjou.com
+nslookup app102.duboisjou.com
+nslookup app202.duboisjou.com
 ```
 ### Positive Case: Access Application using DNS domain
 ```t
 # Access App1
-http://app102.stacksimplify.com/app1/index.html
+http://app102.duboisjou.com/app1/index.html
 
 # Access App2
-http://app202.stacksimplify.com/app2/index.html
+http://app202.duboisjou.com/app2/index.html
 
 # Access Default App (App3)
-http://default102.stacksimplify.com
+http://default102.duboisjou.com
 ```
 
 ## Step-05: Clean Up
@@ -138,9 +138,9 @@ kubectl delete -f kube-manifests/
 ## Verify Route53 Record Set to ensure our DNS records got deleted
 - Go to Route53 -> Hosted Zones -> Records 
 - The below records should be deleted automatically
-  - default102.stacksimplify.com
-  - app102.stacksimplify.com
-  - app202.stacksimplify.com
+  - default102.duboisjou.com
+  - app102.duboisjou.com
+  - app202.duboisjou.com
 ```
 
 

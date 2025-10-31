@@ -7,7 +7,7 @@ description: Learn AWS Load Balancer Controller - Ingress SSL Discovery Host
 - Automatically disover SSL Certificate from AWS Certificate Manager Service using `spec.tls.host`
 - In this approach, with the specified domain name if we have the SSL Certificate created in AWS Certificate Manager, that certificate will be automatically detected and associated to Application Load Balancer.
 - We don't need to get the SSL Certificate ARN and update it in Kubernetes Ingress Manifest
-- Discovers via Ingress rule host and attaches a cert for `app102.stacksimplify.com` or `*.stacksimplify.com` to the ALB
+- Discovers via Ingress rule host and attaches a cert for `app102.duboisjou.com` or `*.duboisjou.com` to the ALB
 
 ## Step-02: Discover via Ingress "spec.tls.hosts"
 ```yaml
@@ -38,7 +38,7 @@ metadata:
     # SSL Redirect Setting
     alb.ingress.kubernetes.io/ssl-redirect: '443'
     # External DNS - For creating a Record Set in Route53
-    external-dns.alpha.kubernetes.io/hostname: certdiscovery-tls-101.stacksimplify.com 
+    external-dns.alpha.kubernetes.io/hostname: certdiscovery-tls-101.duboisjou.com 
 spec:
   ingressClassName: my-aws-ingress-class   # Ingress Class                  
   defaultBackend:
@@ -48,7 +48,7 @@ spec:
         number: 80     
   tls:
   - hosts:
-    - "*.stacksimplify.com"
+    - "*.duboisjou.com"
   rules:
     - http:
         paths:
@@ -106,7 +106,7 @@ kubectl logs -f $(kubectl get po | egrep -o 'external-dns[A-Za-z0-9-]+')
 ### Verify Route53
 - Go to Services -> Route53
 - You should see **Record Sets** added for 
-  - certdiscovery-tls-901.stacksimplify.com 
+  - certdiscovery-tls-901.duboisjou.com 
 
 
 ## Step-04: Access Application using newly registered DNS Name
@@ -114,18 +114,18 @@ kubectl logs -f $(kubectl get po | egrep -o 'external-dns[A-Za-z0-9-]+')
 - Test if our new DNS entries registered and resolving to an IP Address
 ```t
 # nslookup commands
-nslookup certdiscovery-tls-101.stacksimplify.com 
+nslookup certdiscovery-tls-101.duboisjou.com 
 ```
 ### Access Application using DNS domain
 ```t
 # Access App1
-http://certdiscovery-tls-101.stacksimplify.com/app1/index.html
+http://certdiscovery-tls-101.duboisjou.com/app1/index.html
 
 # Access App2
-http://certdiscovery-tls-101.stacksimplify.com/app2/index.html
+http://certdiscovery-tls-101.duboisjou.com/app2/index.html
 
 # Access Default App (App3)
-http://certdiscovery-tls-101.stacksimplify.com
+http://certdiscovery-tls-101.duboisjou.com
 ```
 
 ## Step-05: Clean Up
@@ -136,7 +136,7 @@ kubectl delete -f kube-manifests/
 ## Verify Route53 Record Set to ensure our DNS records got deleted
 - Go to Route53 -> Hosted Zones -> Records 
 - The below records should be deleted automatically
-  - certdiscovery-tls-101.stacksimplify.com 
+  - certdiscovery-tls-101.duboisjou.com 
 ```
 
 

@@ -32,7 +32,7 @@ eksctl version
 - We need to have the below two listed components to be already running on our NodeGroup before deploying our application on fargate. 
   - ALB Ingress Controller
   - External DNS
-- For our application, in addition to just deploying it we are going to access it via DNS registed url `fpdev.kubeoncloud.com`
+- For our application, in addition to just deploying it we are going to access it via DNS registed url `fpdev.duboisjou.com.com`
 
 ```
 # Get Current Worker Nodes in Kubernetes cluster
@@ -120,7 +120,7 @@ metadata:
 - Also update the DNS Names
 ```yml
     # External DNS - For creating a Record Set in Route53
-    external-dns.alpha.kubernetes.io/hostname: fpdev.kubeoncloud.com   
+    external-dns.alpha.kubernetes.io/hostname: fpdev.duboisjou.com.com   
 ```
 
 ## Step-05: Deploy Workload to Fargate
@@ -144,7 +144,7 @@ kubectl get ingress -n fp-dev
 ## Step-06: Access Application & Test
 ```
 # Access Application
-http://fpdev.kubeoncloud.com/app1/index.html
+http://fpdev.duboisjou.com/app1/index.html
 ```
 
 

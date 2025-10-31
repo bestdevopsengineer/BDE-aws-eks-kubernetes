@@ -54,9 +54,9 @@ Observation:
 ## Step-07: Verify by accessing in browser
 ```t
 # Web URLs
-http://ingress-groups-demo601.stacksimplify.com/app1/index.html
-http://ingress-groups-demo601.stacksimplify.com/app2/index.html
-http://ingress-groups-demo601.stacksimplify.com
+http://ingress-groups-demo601.duboisjou.com/app1/index.html
+http://ingress-groups-demo601.duboisjou.com/app2/index.html
+http://ingress-groups-demo601.duboisjou.com
 ```
 
 ## Step-08: Clean-Up
@@ -67,5 +67,5 @@ kubectl delete -R -f kube-manifests/
 ## Verify Route53 Record Set to ensure our DNS records got deleted
 - Go to Route53 -> Hosted Zones -> Records 
 - The below records should be deleted automatically
-  - ingress-groups-demo601.stacksimplify.com
+  - ingress-groups-demo601.duboisjou.com
 ```
