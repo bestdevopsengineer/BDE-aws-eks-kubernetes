@@ -71,7 +71,8 @@ eksctl create nodegroup --cluster=eksdemo1 \
                         --full-ecr-access \
                         --appmesh-access \
                         --alb-ingress-access 
-```
+
+
 # create EKS node gorup in private subnets
 eksctl create nodegroup --cluster=eksdemo1
                           --region=us-east-1
@@ -90,6 +91,7 @@ eksctl create nodegroup --cluster=eksdemo1
                           --alb-ingress-access
                           --node-private-networking
 
+```
 ## Step-05: Verify Cluster & Nodes
 
 ### Verify NodeGroup subnets to confirm EC2 Instances are in Public Subnet
