@@ -72,6 +72,23 @@ eksctl create nodegroup --cluster=eksdemo1 \
                         --appmesh-access \
                         --alb-ingress-access 
 ```
+# create EKS node gorup in private subnets
+eksctl create nodegroup --cluster=eksdemo1
+                          --region=us-east-1
+                          --name=eksdemo1-ng-private1
+                          --node-type=t3.medium
+                          --nodes-min=2
+                          --nodes-max=4
+                          --node-volume-size=20
+                          --ssh-access
+                          --ssh-public-key=kube-demo
+                          --managed
+                          --asg-access
+                          --external-dns-access
+                          --full-ecr-access
+                          --appmesh-access
+                          --alb-ingress-access
+                          --node-private-networking
 
 ## Step-05: Verify Cluster & Nodes
 
